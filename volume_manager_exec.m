@@ -86,7 +86,7 @@ end
 volume_setup_exec_path = getenv('CS_VOLUME_SETUP_EXEC'); % Error check for isempty?
 
 if isempty(volume_setup_exec_path)
-    volume_setup_exec_path = '/cm/shared/workstation_code_dev/matlab_execs/setup_volume_work_for_CSrecon_executable/20171004_1753/run_setup_volume_work_for_CSrecon_exec.sh';
+    volume_setup_exec_path = '	20171004_1753/run_setup_volume_work_for_CSrecon_exec.sh';
     setenv('CS_VOLUME_SETUP_EXEC',volume_setup_exec_path);
 end
 
