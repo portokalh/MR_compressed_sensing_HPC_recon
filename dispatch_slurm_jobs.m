@@ -1,8 +1,11 @@
 function [ jobids,msg1,msg2 ] = dispatch_slurm_jobs( batch_file,slurm_options_string,optional_dependencies,optional_dependency_type )
 % Custom handling of using the sbatch command
 %
+
+
 jobids=0;
 dependencies='';
+dependency_string = '';
 msg1='';
 msg2='';
 
@@ -15,6 +18,19 @@ if exist(batch_file,'file') % batch_file could just be a naked command
     if ~strcmp(default_dir(end),'/')
        default_dir = [default_dir '/']; 
     end
+end
+
+or_flag = 0;
+old_slurm = 0;
+if exist('optional_dependency_type','var') && ~isempty(strfind(optional_dependency_type,'-or'))
+    
+    [~,s_version]=system('scontrol version');
+    
+    if ~isempty(strfind(s_version,'slurm 2.5.7'))
+        old_slurm=1;
+    end
+    optional_dependency_type((end-2):end) = [];
+    or_flag = 1;
 end
 
 
@@ -40,9 +56,26 @@ if exist('optional_dependencies','var') && ~isempty(optional_dependencies)
     end
     optional_dependencies = list;
 
-    dependencies = ['--dependency=' optional_dependency_type optional_dependencies];
+    dependency_string = [optional_dependency_type optional_dependencies];
 elseif exist('optional_dependency_type','var' )
-    dependencies = ['--dependency=' optional_dependency_type];
+    dependency_string = optional_dependency_type;
+end
+
+if ~isempty(strfind(dependency_string,':')) && or_flag
+   if old_slurm
+       dependency_string = strrep(dependency_string,optional_dependency_type,'afterany');
+   else
+        dep_array = strsplit(dependency_string,':');
+        d_type = dep_array{1};
+        d_limiter = ['?' d_type ':'];
+        dep_array(1)=[];
+        dep_array{1}=[d_type ':' dep_array{1}];
+        dependency_string = strjoin(dep_array,d_limiter);
+   end
+end
+
+if ~isempty(dependency_string)
+   dependencies = ['--dependency=' dependency_string]; 
 end
 
 if exist('slurm_options_string','var')

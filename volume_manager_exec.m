@@ -86,7 +86,8 @@ end
 volume_setup_exec_path = getenv('CS_VOLUME_SETUP_EXEC'); % Error check for isempty?
 
 if isempty(volume_setup_exec_path)
-    volume_setup_exec_path = '	20171004_1753/run_setup_volume_work_for_CSrecon_exec.sh';
+    %volume_setup_exec_path = '/cm/shared/workstation_c ode_dev/matlab_execs/setup_volume_work_for_CSrecon_executable/20171004_1753/run_setup_volume_work_for_CSrecon_exec.sh';
+    volume_setup_exec_path = '/cm/shared/workstation_code_dev/matlab_execs/setup_volume_work_for_CSrecon_executable/stable/run_setup_volume_work_for_CSrecon_exec.sh';
     setenv('CS_VOLUME_SETUP_EXEC',volume_setup_exec_path);
 end
 
@@ -94,28 +95,32 @@ end
 slicewise_recon_exec_path = getenv('CS_SLICEWISE_RECON_EXEC'); % Error check for isempty?
 
 if isempty(slicewise_recon_exec_path)
-    slicewise_recon_exec_path = '/cm/shared/workstation_code_dev/matlab_execs/slicewise_CSrecon_executable/20171002_1551/run_slicewise_CSrecon_exec.sh';
+    %slicewise_recon_exec_path = '/cm/shared/workstation_code_dev/matlab_execs/slicewise_CSrecon_executable/20171002_1551/run_slicewise_CSrecon_exec.sh';
+    slicewise_recon_exec_path = '/cm/shared/workstation_code_dev/matlab_execs/slicewise_CSrecon_executable/stable/run_slicewise_CSrecon_exec.sh';
     setenv('CS_SLICEWISE_RECON_EXEC',slicewise_recon_exec_path);
 end
 
 volume_cleanup_exec_path = getenv('CS_VOLUME_CLEANUP_EXEC'); % Error check for isempty?
 
 if isempty(volume_cleanup_exec_path)
-    volume_cleanup_exec_path = '/cm/shared/workstation_code_dev/matlab_execs/volume_cleanup_for_CSrecon_executable/20171005_1536/run_volume_cleanup_for_CSrecon_exec.sh';
+    %volume_cleanup_exec_path = '/cm/shared/workstation_code_dev/matlab_execs/volume_cleanup_for_CSrecon_executable/20171005_1536/run_volume_cleanup_for_CSrecon_exec.sh';
+    volume_cleanup_exec_path = '/cm/shared/workstation_code_dev/matlab_execs/volume_cleanup_for_CSrecon_executable/stable/run_volume_cleanup_for_CSrecon_exec.sh';
     setenv('CS_VOLUME_CLEANUP_EXEC',volume_cleanup_exec_path);
 end
 
 procpar_gatekeeper_exec_path = getenv('CS_PROCPAR_GATEKEEPER_EXEC'); % Error check for isempty?
 
 if isempty(procpar_gatekeeper_exec_path)
-    procpar_gatekeeper_exec_path ='/cm/shared/workstation_code_dev/matlab_execs/local_file_gatekeeper_executable/20171004_1110//run_local_file_gatekeeper_exec.sh';
+    %procpar_gatekeeper_exec_path ='/cm/shared/workstation_code_dev/matlab_execs/local_file_gatekeeper_executable/20171004_1110//run_local_file_gatekeeper_exec.sh';
+    procpar_gatekeeper_exec_path ='/cm/shared/workstation_code_dev/matlab_execs/local_file_gatekeeper_executable/stable/run_local_file_gatekeeper_exec.sh';
     setenv('CS_PROCPAR_GATEKEEPER_EXEC',procpar_gatekeeper_exec_path);
     
 end
 
 procpar_cleanup_exec_path = getenv('CS_PROCPAR_CLEANUP_EXEC');
 if isempty(procpar_cleanup_exec_path)
-    procpar_cleanup_exec_path='/cm/shared/workstation_code_dev/matlab_execs/process_headfile_CS_executable/20171010_1529/run_process_headfile_CS.sh';
+    %procpar_cleanup_exec_path='/cm/shared/workstation_code_dev/matlab_execs/process_headfile_CS_executable/20171010_1529/run_process_headfile_CS.sh';
+    procpar_cleanup_exec_path='/cm/shared/workstation_code_dev/matlab_execs/process_headfile_CS_executable/stable/run_process_headfile_CS.sh';
     setenv('CS_PROCPAR_CLEANUP_EXEC',procpar_cleanup_exec_path);
 end
 
@@ -249,11 +254,12 @@ success_flag=sprintf('%s/.%s_send_images_to_%s_SUCCESSFUL', images_dir,volume_ru
 at_fail_flag=sprintf('%s/.%s_send_archive_tag_to_%s_FAILED', images_dir,volume_runno,target_machine);
 at_success_flag=sprintf('%s/.%s_send_archive_tag_to_%s_SUCCESSFUL', images_dir,volume_runno,target_machine);
 
+original_archive_tag=sprintf('%s/READY_%s',images_dir,volume_runno);
 local_archive_tag_prefix = [volume_runno '_' target_machine];
 local_archive_tag = sprintf('%s/READY_%s',images_dir,local_archive_tag_prefix);
 
 % Make faux headfile with minimal details (will overwrite later).
-if ~exist(headfile,'file')
+%if ~exist(headfile,'file')
     bh=struct;
     bh.dim_X=original_dims(1);
     bh.dim_Y=original_dims(2);
@@ -273,17 +279,22 @@ if ~exist(headfile,'file')
     faux_struct1 = combine_struct(bh,gui_info,'U_');
     
     databuffer.headfile = combine_struct(databuffer.headfile,faux_struct1);
-    
+if ~exist(headfile,'file')   
     write_headfile(headfile,databuffer.headfile);
     
     ship_cmd = sprintf('scp %s omega@%s.duhs.duke.edu:/Volumes/%sspace/%s/',headfile,target_machine,target_machine,volume_runno);
     system(ship_cmd);
-    
-    write_archive_tag_nodev(local_archive_tag_prefix,['/' target_machine 'space'],original_dims(3),databuffer.headfile.U_code, ...
-                  '.raw',databuffer.headfile.U_civmid,true,images_dir) 
-    
 end
 
+if ~exist(local_archive_tag,'file')
+    if ~exist(original_archive_tag,'file')
+        write_archive_tag_nodev(volume_runno,['/' target_machine 'space'],original_dims(3),databuffer.headfile.U_code, ...
+        '.raw',databuffer.headfile.U_civmid,true,images_dir)
+    end
+    
+    system(sprintf('mv %s %s',original_archive_tag,local_archive_tag)); 
+end
+    
 if isdeployed
     p_time = 5*(volume_number-1);
     
@@ -319,7 +330,12 @@ if ~starting_point
     volume_manager_batch = [workdir 'sbatch/' volume_runno '_volume_manager.bash'];
     vm_cmd = sprintf('%s %s %s %s %i %s', volume_manager_exec_path,matlab_path, recon_file,volume_runno, volume_number,base_workdir);
     batch_file = create_slurm_batch_files(volume_manager_batch,vm_cmd,vm_slurm_options);
-    c_running_jobs = dispatch_slurm_jobs(batch_file,'',running_jobs,'afterok');
+    
+    or_dependency = '';
+    if ~isempty(running_jobs)
+        or_dependency='afterok-or';
+    end
+    c_running_jobs = dispatch_slurm_jobs(batch_file,'',running_jobs,or_dependency);
     
     log_mode = 1;
     log_msg =sprintf('Fid data for volume %s not available yet; initializing gatekeeper (SLURM jobid(s): %s).\n',volume_runno,running_jobs);
@@ -558,14 +574,16 @@ else
             swr_cmd = sprintf('%s %s %s %s %s', slicewise_recon_exec_path,matlab_path, volume_variable_file, slice_string,recon_options_file);
             
             if  stage_2_running_jobs
-                dep_string = ['afterok:' stage_2_running_jobs];
+                dep_string = stage_2_running_jobs;
+                dep_type = 'afterok-or';
             else
                 dep_string = '';
+                dep_type = '';
             end
             
             batch_file = create_slurm_batch_files(slicewise_recon_batch,swr_cmd,swr_slurm_options);
             c_running_jobs ='';
-            [c_running_jobs, msg1,msg2]= dispatch_slurm_jobs(batch_file,'',dep_string);
+            [c_running_jobs, msg1,msg2]= dispatch_slurm_jobs(batch_file,'',dep_string,dep_type);
             if c_running_jobs
                 %if stage_3_running_jobs
                 stage_3_running_jobs = [stage_3_running_jobs ':' c_running_jobs];
@@ -649,10 +667,10 @@ else
     
     write_archive_tag_success_cmd = sprintf('if [[ -f %s ]]; then\n\trm %s;\nfi;\nif [[ ${archive_tag_success} -eq 1 ]];\nthen\n\techo "Archive tag transfer successful!"\n\ttouch %s;\nelse\n\ttouch %s; \nfi',at_fail_flag,at_fail_flag,at_success_flag,at_fail_flag);
     handle_archive_tag_cmd = sprintf('if [[ ! -f %s ]]; then\n\tarchive_tag_success=0;\n\tif [[ -f %s ]] && [[ -f %s ]]; then\n\t\tscp -p %s omega@%s.duhs.duke.edu:/Volumes/%sspace/Archive_Tags/READY_%s && archive_tag_success=1;\n\t\t%s;\n\tfi;\nfi',at_success_flag, success_flag, hf_success_flag,local_archive_tag,target_machine,target_machine,volume_runno,write_archive_tag_success_cmd);
-   
+    
     if (starting_point <= 5)
         % Send to workstation and write completion flag.
-  
+        
         %rm_previous_flag = sprintf('if [[ -f %s ]]; then rm %s; fi',fail_flag,fail_flag);
         
         t_images_dir = images_dir;
@@ -668,7 +686,7 @@ else
         mkdir_cmd = sprintf('ssh omega@%s.duhs.duke.edu ''mkdir -p -m 777 /Volumes/%sspace/%s/%simages/''',target_machine,target_machine,volume_runno,volume_runno);
         scp_cmd = sprintf('echo "Attempting to transfer data to %s.";scp -r %s omega@%s.duhs.duke.edu:/Volumes/%sspace/%s/ && success=1',target_machine,t_images_dir,target_machine,target_machine,volume_runno);
         write_success_cmd = sprintf('if [[ $success -eq 1 ]];\nthen\n\techo "Transfer successful!"\n\ttouch %s;\nelse\n\ttouch %s; \nfi',success_flag,fail_flag);
-
+        
         %{
        local_size_cmd = sprintf('gimmespaceK=`du -cks %s | tail -n 1 | xargs |cut -d '' '' -f1`',images_dir);
        remote_size_cmd = sprintf('freespaceK=`ssh omega@%s.duhs.duke.edu ''df -k /Volumes/%sspace ''| tail -1 | cut -d '' '' -f5`',target_machine,target_machine);
@@ -678,7 +696,7 @@ else
         
         shipper_cmds{1}=sprintf('if [[ -f %s ]]; then\n\trm %s;\nfi',fail_flag,fail_flag);
         shipper_cmds{2}=sprintf('gimmespaceK=`du -cks %s | tail -n 1 | xargs |cut -d '' '' -f1`',images_dir);
-        shipper_cmds{3}=sprintf('freespaceK=`ssh omega@%s.duhs.duke.edu ''df -k /Volumes/%sspace ''| tail -1 | cut -d '' '' -f5`',target_machine,target_machine);
+        shipper_cmds{3}=sprintf('freespaceK=`ssh omega@%s.duhs.duke.edu ''df -k /Volumes/%sspace ''| tail -1 | xargs | cut -d '' '' -f4`',target_machine,target_machine);
         shipper_cmds{4}=sprintf('success=0');
         shipper_cmds{5}=sprintf('if [[ $freespaceK -lt $gimmespaceK ]];');
         shipper_cmds{6}=sprintf('then\n\techo "ERROR: not enough space to transfer %s to %s; $gimmespaceK K needed, but only $freespaceK K available."',images_dir,target_machine);
@@ -701,7 +719,7 @@ else
         
         dep_status='';
         if stage_4_running_jobs
-            dep_status='afterok';
+            dep_status='afterok-or';
         end
         stage_5_running_jobs = dispatch_slurm_jobs(batch_file,'',stage_4_running_jobs,dep_status);
         
@@ -730,27 +748,26 @@ disp('Finished!')
     if (starting_point <= 6)
         
         % Send a message that all recon is completed and has successfully
-        % been sent to the target machine.
+        % been sent to the target machine
         
-    end
-    
-    recon_type = 'CS_v2';
-    
-    
-    
-    ship_cmd_0=sprintf('if [[ -f %s ]]; then\n\trm %s;\nfi',hf_fail_flag,hf_fail_flag);
-    ship_cmd_1 = sprintf('ssh omega@%s.duhs.duke.edu ''if [[ ! -d /Volumes/%sspace/%s/ ]] ; then\n\t mkdir -m 777 /Volumes/%sspace/%s/;\nfi;''\nscp -p %s omega@%s.duhs.duke.edu:/Volumes/%sspace/%s/;',target_machine,target_machine,volume_runno,target_machine,volume_runno,procpar_file,target_machine,target_machine,volume_runno);
-    ship_cmd_2 = sprintf('hf_success=0;\nssh omega@%s.duhs.duke.edu ''if [[ ! -d /Volumes/%sspace/%s/%simages/ ]] ; then\n\t mkdir -m 777 /Volumes/%sspace/%s/%simages/;\nfi '';\nscp -p %s omega@%s.duhs.duke.edu:/Volumes/%sspace/%s/%simages/ && hf_success=1',target_machine,target_machine,volume_runno,volume_runno,target_machine,volume_runno, volume_runno,headfile,target_machine,target_machine,volume_runno,volume_runno);
-    write_hf_success_cmd = sprintf('if [[ $hf_success -eq 1 ]];\nthen\n\techo "Headfile transfer successful!"\n\ttouch %s;\nelse\n\ttouch %s; \nfi',hf_success_flag,hf_fail_flag);
         
-    
-    %archive_tag_cmd = '...';
-    pp_running_jobs='';
-    
-    
-    if ~(volume_number == n_volumes) && ~exist(procpar_file,'file')
+        recon_type = 'CS_v2';
         
-        %{
+        
+        
+        ship_cmd_0=sprintf('if [[ -f %s ]]; then\n\trm %s;\nfi',hf_fail_flag,hf_fail_flag);
+        ship_cmd_1 = sprintf('ssh omega@%s.duhs.duke.edu ''if [[ ! -d /Volumes/%sspace/%s/ ]] ; then\n\t mkdir -m 777 /Volumes/%sspace/%s/;\nfi;''\nscp -p %s omega@%s.duhs.duke.edu:/Volumes/%sspace/%s/;',target_machine,target_machine,volume_runno,target_machine,volume_runno,procpar_file,target_machine,target_machine,volume_runno);
+        ship_cmd_2 = sprintf('hf_success=0;\nssh omega@%s.duhs.duke.edu ''if [[ ! -d /Volumes/%sspace/%s/%simages/ ]] ; then\n\t mkdir -m 777 /Volumes/%sspace/%s/%simages/;\nfi '';\nscp -p %s omega@%s.duhs.duke.edu:/Volumes/%sspace/%s/%simages/ && hf_success=1',target_machine,target_machine,volume_runno,volume_runno,target_machine,volume_runno, volume_runno,headfile,target_machine,target_machine,volume_runno,volume_runno);
+        write_hf_success_cmd = sprintf('if [[ $hf_success -eq 1 ]];\nthen\n\techo "Headfile transfer successful!"\n\ttouch %s;\nelse\n\ttouch %s; \nfi',hf_success_flag,hf_fail_flag);
+        
+        
+        %archive_tag_cmd = '...';
+        pp_running_jobs='';
+        
+        
+        if ~(volume_number == n_volumes) && ~exist(procpar_file,'file')
+            
+            %{
         process_headfile_CS(recon_file,headfile,procpar_file,recon_type);
         log_mode=1;
         log_msg =sprintf('Procpar data for volume %s exists; Converting procpar information to headfile: %s.\n',volume_runno,headfile);
@@ -766,59 +783,90 @@ disp('Finished!')
         yet_another_logger(log_msg,log_mode,log_file);
         
         
-        %{
+            %{
         copy_archivetag_cmd = ['sshpass -p ' pw ' scp -p ' fullfile(images_dir,['READY_' volume_runno]) ...
     ' omega@' target_machine '.duhs.duke.edu:/Volumes/' target_machine 'space/Archive_Tags/READY_' volume_runno];
 system(copy_archivetag_cmd);
-        %}
-        %}
+            %}
+            %}
+            
+            gk_slurm_options=struct;
+            gk_slurm_options.v=''; % verbose
+            gk_slurm_options.s=''; % shared; gatekeeper definitely needs to share resources.
+            gk_slurm_options.mem=512; % memory requested; gatekeeper only needs a miniscule amount--or so I thought!.
+            gk_slurm_options.p=gatekeeper_queue;
+            
+            %gk_slurm_options.job_name = [volume_runno '_procpar_gatekeeper'];
+            gk_slurm_options.job_name = [runno '_procpar_gatekeeper_and_processor'];
+            
+            %gk_slurm_options.reservation = active_reservation;
+            
+            
+            procpar_gatekeeper_batch = [workdir '/sbatch/' volume_runno '_procpar_gatekeeper.bash'];
+            procpar_gatekeeper_cmd = sprintf('%s %s %s %s', procpar_gatekeeper_exec_path, matlab_path,procpar_file,log_file);
+            batch_file = create_slurm_batch_files(procpar_gatekeeper_batch,procpar_gatekeeper_cmd,gk_slurm_options);
+            pp_running_jobs = dispatch_slurm_jobs(batch_file,'','','singleton');
+        end
         
-        gk_slurm_options=struct;
-        gk_slurm_options.v=''; % verbose
-        gk_slurm_options.s=''; % shared; gatekeeper definitely needs to share resources.
-        gk_slurm_options.mem=512; % memory requested; gatekeeper only needs a miniscule amount--or so I thought!.
-        gk_slurm_options.p=gatekeeper_queue;
+        ppcu_slurm_options=struct;
+        ppcu_slurm_options.v=''; % verbose
+        ppcu_slurm_options.s=''; % shared; volume manager needs to share resources.
+        ppcu_slurm_options.mem=500; % memory requested; ppcu only needs a miniscule amount.
+        ppcu_slurm_options.p='slow_master'; % For now, will use gatekeeper queue for volume manager as well
         
-        %gk_slurm_options.job_name = [volume_runno '_procpar_gatekeeper'];
-        gk_slurm_options.job_name = [runno '_procpar_gatekeeper_and_processor'];
+        %ppcu_slurm_options.job_name = [volume_runno '_procpar_cleanup'];
+        ppcu_slurm_options.job_name = [runno '_procpar_gatekeeper_and_processor']; % Trying singleton dependency
         
-        %gk_slurm_options.reservation = active_reservation;
+        %ppcu_slurm_options.reservation = active_reservation;
+        
+        procpar_cleanup_batch = [workdir 'sbatch/' volume_runno '_procpar_cleanup.bash'];
+        ppcu_cmd = sprintf('%s %s %s %s %s %s', procpar_cleanup_exec_path,matlab_path, recon_file,headfile,procpar_file,recon_type );
+        
+        dep_string ='';
+        
+        %if pp_running_jobs
+        %   dep_string = 'afterok';
+        %end
+        
+        batch_file = create_slurm_batch_files(procpar_cleanup_batch,{ppcu_cmd ship_cmd_0 ship_cmd_1 ship_cmd_2 write_hf_success_cmd handle_archive_tag_cmd},ppcu_slurm_options);
+        c_running_jobs = dispatch_slurm_jobs(batch_file,'','','singleton');
+        
+        log_mode = 1;
+        log_msg =sprintf('Procpar data for volume %s will be processed as soon as it is available; initializing gatekeeper (SLURM jobid(s): %s).\n',volume_runno,c_running_jobs);
+        yet_another_logger(log_msg,log_mode,log_file);
         
         
-        procpar_gatekeeper_batch = [workdir '/sbatch/' volume_runno '_procpar_gatekeeper.bash'];
-        procpar_gatekeeper_cmd = sprintf('%s %s %s %s', procpar_gatekeeper_exec_path, matlab_path,procpar_file,log_file);
-        batch_file = create_slurm_batch_files(procpar_gatekeeper_batch,procpar_gatekeeper_cmd,gk_slurm_options);
-        pp_running_jobs = dispatch_slurm_jobs(batch_file,'','','singleton');
+        
+        
+        %%%% Schedule cleanup
+        
+        trashman_slurm_options=struct;
+        trashman_slurm_options.v=''; % verbose
+        trashman_slurm_options.s=''; % shared; volume manager needs to share resources.
+        trashman_slurm_options.mem=500; % memory requested; trashman only needs a miniscule amount.
+        trashman_slurm_options.p='slow_master'; % For now, will use gatekeeper queue for volume manager as well
+        
+        %trashman_slurm_options.job_name = [volume_runno '_procpar_cleanup'];
+        trashman_slurm_options.job_name = [volume_runno '_trashman']; % Trying singleton dependency
+        
+        %trashman_slurm_options.reservation = active_reservation;
+        
+        trashman_batch = [workdir 'sbatch/' volume_runno '_trashman.bash'];
+        trashman_cmd = sprintf('if [[ -f "%s" ]]; then\n\tif [[ -d "%s" ]]; then\n\t\techo "Images have been successfully transferred; removing %s now...";\n\t\trm -rf %s;\n\telse\n\t\techo "Work folder %s already appears to have been removed. No action will be taken.";\n\tfi\nelse\n\techo "Images have not been successfully transferred yet; work folder will not be removed at this time.";\nfi', success_flag,work_subfolder,work_subfolder,work_subfolder,work_subfolder );
+        
+        dep_string ='';
+        
+        if stage_5_running_jobs
+           dep_string = 'afterok-or';
+        end
+        
+        batch_file = create_slurm_batch_files(trashman_batch,trashman_cmd, trashman_slurm_options);
+        c_running_jobs = dispatch_slurm_jobs(batch_file,'',stage_5_running_jobs ,dep_string);
+        
+        log_mode = 1;
+        log_msg =sprintf('Once images for volume %s have been reconned and sent to %s, work folder %s will be removed via SLURM job(s): %s.\n',volume_runno,target_machine,work_subfolder,c_running_jobs);
+        yet_another_logger(log_msg,log_mode,log_file);
     end
-    
-    ppcu_slurm_options=struct;
-    ppcu_slurm_options.v=''; % verbose
-    ppcu_slurm_options.s=''; % shared; volume manager needs to share resources.
-    ppcu_slurm_options.mem=500; % memory requested; ppcu only needs a miniscule amount.
-    ppcu_slurm_options.p='slow_master'; % For now, will use gatekeeper queue for volume manager as well
-    
-    %ppcu_slurm_options.job_name = [volume_runno '_procpar_cleanup'];
-    ppcu_slurm_options.job_name = [runno '_procpar_gatekeeper_and_processor']; % Trying singleton dependency
-    
-    %ppcu_slurm_options.reservation = active_reservation;
-    
-    procpar_cleanup_batch = [workdir 'sbatch/' volume_runno '_procpar_cleanup.bash'];
-    ppcu_cmd = sprintf('%s %s %s %s %s %s', procpar_cleanup_exec_path,matlab_path, recon_file,headfile,procpar_file,recon_type );
-    
-    dep_string ='';
-    
-    %if pp_running_jobs
-    %   dep_string = 'afterok';
-    %end
-    
-    batch_file = create_slurm_batch_files(procpar_cleanup_batch,{ppcu_cmd ship_cmd_0 ship_cmd_1 ship_cmd_2 write_hf_success_cmd handle_archive_tag_cmd},ppcu_slurm_options);
-    c_running_jobs = dispatch_slurm_jobs(batch_file,'','','singleton');
-    
-    log_mode = 1;
-    log_msg =sprintf('Procpar data for volume %s not available yet; initializing gatekeeper (SLURM jobid(s): %s).\n',volume_runno,c_running_jobs);
-    yet_another_logger(log_msg,log_mode,log_file);
-    
-    
     
     if stage_4_running_jobs
         

@@ -6,6 +6,12 @@ matlab_path = '/cm/shared/apps/MATLAB/R2015b/';
 master_dir = '/cm/shared/workstation_code_dev/matlab_execs/';
 main_dir = [master_dir script_name '_executable/'];
 %main_dir = '/nas4/rja20/CS_recon_setup_executable/'
+latest_path_link = [main_dir 'latest'];
+
+original_builtin_dir='/cm/shared/workstation_code_dev/matlab_execs/streaming_CS_recon_main_executable/20171019_1703/';
+original_builtin_script = 'run_streaming_CS_recon_main_exec_builtin_path.sh';
+original_builtin_path=[original_builtin_dir original_builtin_script];
+bin_path = '/cm/shared/workstation_code_dev/bin/streaming_CS_recon';
 
 
 ts=fix(clock);
@@ -32,16 +38,19 @@ source_file = [source_dir source_filename]
 
 include_string =[];
 include_files = {'/cm/shared/workstation_code_dev/recon/CS_v2/gui_info_collect.m' ...    
-    '/cm/shared/workstation_code_dev/recon/CS_v2/puller_glusterspaceCS_2.m'};
+    '/cm/shared/workstation_code_dev/recon/CS_v2/puller_glusterspaceCS_2.m' ...
+    '/cm/shared/apps/MATLAB/R2015b/toolbox/signal/signal/hamming.m' ...
+    '/cm/shared/apps/MATLAB/R2015b/toolbox/images/images/padarray.m' ...
+    '/cm/shared/workstation_code_dev/recon/CS_v2/zpad.m'};
 
 for ff = 1:length(include_files)
     include_string = [include_string ' -a ' include_files{ff} ' '];
     %system(cp_cmd);
 end
-
+ %-R -singleCompThread
 eval(['mcc -N -d  ' my_dir...
    ' -C -m '...
-   ' -R -singleCompThread -R nodisplay -R nosplash -R nojvm '...
+   ' -R nodisplay -R nosplash -R nojvm '...
    ' ' include_string ' '...
    ' ' source_file ';']) 
    %' -a /home/rmd22/Documents/MATLAB/MATLAB_scripts_rmd/CS/Wavelab850/WavePath2.m '...
@@ -60,4 +69,18 @@ first_run_cmd = [my_dir '/run_' source_filename];
 first_run_cmd(end)=[];
 first_run_cmd = [first_run_cmd 'sh ' matlab_path];
 system(first_run_cmd);
+
+
 eval(['!chmod a+rwx -R ' my_dir '/*'])
+
+
+if exist(latest_path_link,'dir')
+    rm_ln_cmd = sprintf('rm %s',latest_path_link);
+    system(rm_ln_cmd)
+end
+
+ln_cmd = sprintf('ln -s %s %s',my_dir,latest_path_link);
+system(ln_cmd);
+
+update_bin_cmd=sprintf('cp %s %s/;rm %s;ln -s %s/%s %s',original_builtin_path,my_dir,bin_path,my_dir,original_builtin_script,bin_path)
+system(update_bin_cmd);

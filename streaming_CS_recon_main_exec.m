@@ -1,4 +1,4 @@
-function streaming_CS_recon_main_exec(scanner,runno,study,series, varargin )
+function streaming_CS_recon_main_exec(scanner,runno,study,series, CS_table, varargin )
 %  Initially created on 14 September 2017, BJ Anderson, CIVM
 %% SUMMARY
 %  Main code for compressed sensing reconstruction on a computing cluster
@@ -49,7 +49,8 @@ matlab_path = '/cm/shared/apps/MATLAB/R2015b/';
 % Gatekeeper support
 gatekeeper_exec = getenv('CS_GATEKEEPER_EXEC');
 if isempty(gatekeeper_exec)
-    gatekeeper_exec = '/cm/shared/workstation_code_dev/matlab_execs/gatekeeper_executable/20171004_1111/run_gatekeeper_exec.sh';
+    %gatekeeper_exec = '/cm/shared/workstation_code_dev/matlab_execs/gatekeeper_executable/20171004_1111/run_gatekeeper_exec.sh';
+    gatekeeper_exec = '/cm/shared/workstation_code_dev/matlab_execs/gatekeeper_executable/stable/run_gatekeeper_exec.sh';
     setenv('CS_GATEKEEPER_EXEC',gatekeeper_exec);
 end
 
@@ -68,7 +69,8 @@ end
 volume_manager_exec = getenv('CS_VOLUME_MANAGER_EXEC');
 if isempty(volume_manager_exec)
     %volume_manager_exec = '/cm/shared/workstation_code_dev/matlab_execs/volume_manager_executable/20171003_1013/run_volume_manager_exec.sh';
-    volume_manager_exec = '/cm/shared/workstation_code_dev/matlab_execs/volume_manager_executable/latest/run_volume_manager_exec.sh';
+    volume_manager_exec = '/cm/shared/workstation_code_dev/matlab_execs/volume_manager_executable/20171020_1325/run_volume_manager_exec.sh';   
+    %volume_manager_exec = '/cm/shared/workstation_code_dev/matlab_execs/volume_manager_executable/latest/run_volume_manager_exec.sh';
 
     setenv('CS_VOLUME_MANAGER_EXEC',volume_manager_exec);
 end
@@ -113,7 +115,11 @@ options = struct;% options_handler(varargin{:}); % Check name and syntax later.
 % chunk_size
 
 % TEMPORARY, until options are fully implemented
-options.CS_table=0;
+if exist('CS_table','var')
+    options.CS_table=CS_table;
+else
+    options.CS_table=0;
+end
 options.verbose=1;
 %
 
@@ -195,6 +201,8 @@ if ~exist(study_flag,'file')
     
     local_hdr = [workdir runno '_hdr.fid'];
     
+    
+    %{
     [input_fid, local_or_streaming_or_static]=find_input_fidCS(scanner,runno,study,series);
     
     if (local_or_streaming_or_static == 2)
@@ -203,8 +211,17 @@ if ~exist(study_flag,'file')
         log_msg =sprintf('WARNING: Inputs not found locally or on scanner; running in streaming mode.\n');
         yet_another_logger(log_msg,log_mode,log_file);
     end
+    %}
     
     if ~exist(local_hdr,'file');
+        [input_fid, local_or_streaming_or_static]=find_input_fidCS(scanner,runno,study,series);
+        
+        if (local_or_streaming_or_static == 2)
+            log_msg =sprintf('WARNING: Inputs not found locally or on scanner; running in streaming mode.\n');
+            yet_another_logger(log_msg,log_mode,log_file);
+        end
+        
+        
         if (local_or_streaming_or_static == 1)
             get_hdr_from_fid(input_fid,local_hdr);
         else
@@ -219,11 +236,22 @@ if ~exist(study_flag,'file')
     procpar_file = [workdir runno '.procpar'];
     procpar_or_CStable= procpar_file;
     if ~exist(procpar_file,'file')
+        if ~exist('local_or_streaming_or_static','var')
+            [input_fid, local_or_streaming_or_static]=find_input_fidCS(scanner,runno,study,series);
+        end
         if (local_or_streaming_or_static == 2)
             tables_in_workdir=dir([workdir '/CS*_*x*_*']);
             if (isempty(tables_in_workdir))
                 if (~options.CS_table)
-                    options.CS_table = input('Please enter the name of the CS table used for this scan.','s');
+                    %options.CS_table = input('Please enter the name of the CS table used for this scan.','s');
+                    pull_table_cmd = [ 'ssh omega@' scanner ' ''cd /home/vnmr1/vnmrsys/tablib/; ls CS*_*x_*'''];   
+                    [~,available_tables]=system(pull_table_cmd);
+                    log_msg = sprintf('Please rerun this code and specify the CS_table to run in streaming mode (otherwise you will need to wait until the entire scan completes).\nAvailable tables:\n%s\n',available_tables);
+                    %procpar_or_CStable=[workdir options.CS_table];        
+                    yet_another_logger(log_msg,log_mode,log_file,1);
+                    if isdeployed
+                        quit force;
+                    end
                 end
                 log_msg = sprintf('Per user specification, using CS_table ''%s''.\n',options.CS_table);
             else
@@ -269,7 +297,9 @@ if ~exist(study_flag,'file')
     
     for volume_number = 1:n_volumes;
         vol_string =sprintf(['%0' num2str(numel(num2str(n_volumes-1))) 'i' ],volume_number-1);
-        volume_flag = [workdir '/' runno '_m' vol_string '/.' runno '_m' vol_string '.recon_completed'];
+        volume_runno = sprintf('%s_m%s',runno,vol_string);
+        %volume_flag = [workdir '/' runno '_m' vol_string '/.' runno '_m' vol_string '.recon_completed'];
+        volume_flag=sprintf('%s/%s/%simages/.%s_send_archive_tag_to_%s_SUCCESSFUL', workdir,volume_runno,volume_runno,volume_runno,target_machine);
         if ~exist(volume_flag,'file')
             unreconned_volumes = [ unreconned_volumes volume_number ]; 
             unreconned_volumes_strings{length(unreconned_volumes_strings)+1}=vol_string;
@@ -347,7 +377,7 @@ if ~exist(study_flag,'file')
         
         m.xfmWeight = xfmWeight;
 
-        Itnlim =98;
+        Itnlim = 98; %%98 is default
         m.Itnlim = Itnlim;
         
         OuterIt = 1;
@@ -368,7 +398,10 @@ if ~exist(study_flag,'file')
         % necessary.
         
         if (nblocks == 1)
-
+            if ~exist('local_or_streaming_or_static','var')
+                [input_fid, local_or_streaming_or_static]=find_input_fidCS(scanner,runno,study,series);
+            end
+            
             if (local_or_streaming_or_static == 2)
                 log_msg =sprintf('WARNING: Unable to stream recon for this type of scan (single-block fid); will wait for scan to complete.\n');
                 yet_another_logger(log_msg,log_mode,log_file);   
@@ -465,7 +498,12 @@ if ~exist(study_flag,'file')
             volume_manager_batch = [volume_dir 'sbatch/' volume_runno '_volume_manager.bash'];
             vm_cmd = sprintf('%s %s %s %s %i %s', volume_manager_exec, matlab_path, recon_file,volume_runno, volume_number,workdir);
             batch_file = create_slurm_batch_files(volume_manager_batch,vm_cmd,vm_slurm_options);
-            c_running_jobs = dispatch_slurm_jobs(batch_file,'',running_jobs);
+            
+            or_dependency = '';
+            if ~isempty(running_jobs)
+               or_dependency='afterok-or'; 
+            end
+            c_running_jobs = dispatch_slurm_jobs(batch_file,'',running_jobs,or_dependency);
             
             log_msg =sprintf('Initializing Volume Manager for volume %s (SLURM jobid(s): %s).\n',volume_runno,c_running_jobs);
             yet_another_logger(log_msg,log_mode,log_file);
