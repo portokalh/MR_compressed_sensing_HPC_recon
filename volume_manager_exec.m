@@ -694,15 +694,16 @@ else
            'else %s; fi; %s'],  images_dir,target_machine, scp_cmd,write_success_cmd);
         %}
         
-        shipper_cmds{1}=sprintf('if [[ -f %s ]]; then\n\trm %s;\nfi',fail_flag,fail_flag);
+        n_raw_images = original_dims(3);
+        
+        shipper_cmds{1}=sprintf('success=0;\nc_raw_images=$(ls %s | grep raw | wc -l | xargs); if [[ "${c_raw_images}"  -lt "%i" ]]; then\n\techo "Not all %i raw images have been written (${c_raw_images} total); no images will be sent to remote machine.";\nelse\nif [[ -f %s ]]; then\n\trm %s;\nfi',images_dir,n_raw_images,n_raw_images,fail_flag,fail_flag);
         shipper_cmds{2}=sprintf('gimmespaceK=`du -cks %s | tail -n 1 | xargs |cut -d '' '' -f1`',images_dir);
         shipper_cmds{3}=sprintf('freespaceK=`ssh omega@%s.duhs.duke.edu ''df -k /Volumes/%sspace ''| tail -1 | xargs | cut -d '' '' -f4`',target_machine,target_machine);
-        shipper_cmds{4}=sprintf('success=0');
-        shipper_cmds{5}=sprintf('if [[ $freespaceK -lt $gimmespaceK ]];');
-        shipper_cmds{6}=sprintf('then\n\techo "ERROR: not enough space to transfer %s to %s; $gimmespaceK K needed, but only $freespaceK K available."',images_dir,target_machine);
-        shipper_cmds{7}=sprintf('else\n\t%s;\n\t%s;\nfi',mkdir_cmd,scp_cmd);
-        shipper_cmds{8}=sprintf('%s',write_success_cmd);
-        shipper_cmds{9}=sprintf('%s',handle_archive_tag_cmd);
+        shipper_cmds{4}=sprintf('if [[ $freespaceK -lt $gimmespaceK ]];');
+        shipper_cmds{5}=sprintf('then\n\techo "ERROR: not enough space to transfer %s to %s; $gimmespaceK K needed, but only $freespaceK K available."',images_dir,target_machine);
+        shipper_cmds{6}=sprintf('else\n\t%s;\n\t%s;\nfi',mkdir_cmd,scp_cmd);
+        shipper_cmds{7}=sprintf('fi\n%s',write_success_cmd);
+        shipper_cmds{8}=sprintf('%s',handle_archive_tag_cmd);
         
         shipper_slurm_options=struct;
         shipper_slurm_options.v=''; % verbose

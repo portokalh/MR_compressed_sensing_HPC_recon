@@ -1,4 +1,4 @@
-%function [npoints,nblocks,ntraces,bitdepth,bytes_per_block,complete_file_size,b_status] = load_fid_hdrCS(fidpath)
+function [npoints,nblocks,ntraces,bitdepth,bytes_per_block,complete_file_size,b_status] = load_fid_hdrCS(fidpath)
 % Useful Ref: https://www.agilent.com/cs/library/usermanuals/Public/0199937900a.pdf
 try
     fid = fopen(fidpath,'r','ieee-be');
@@ -49,4 +49,4 @@ complete_file_size=32+nblocks*bytes_per_block;
 
 fclose(fid);
 
-%end
+end

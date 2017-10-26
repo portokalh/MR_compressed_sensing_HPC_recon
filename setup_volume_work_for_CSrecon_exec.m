@@ -6,8 +6,8 @@ function setup_volume_work_for_CSrecon_exec(variables_file,volume_number)
 %% Update of original version (implied _v1)
 
 if ~isdeployed
-    variables_file = '/glusterspace/S67669.work/S67669_m13/work/S67669_m13_setup_variables.mat';
-    volume_number = '14';
+    variables_file = '/glusterspace/S67841.work/S67841_m00/work/S67841_m00_setup_variables.mat';
+    volume_number = '1';
     
 end
 
@@ -155,11 +155,11 @@ if (make_workspace)
     else
         
         tic
-        current_slice=zeros(size(original_mask),'like',data);
-        qq=zeros([1 original_dims(1)]);
-        for n = 1:original_dims(1)
+        current_slice=zeros([size(mask)],'like',data);
+        qq=zeros([1 recon_dims(1)]);
+        for n = 1:recon_dims(1)
             current_slice(mask(:))=data(n,:);
-            temp_data = abs(ifftn(current_slice./original_pdf)); % 8 May 2017, BJA: Don't need to waste computations on fftshift for scaling calculation
+            temp_data = abs(ifftn(current_slice./CSpdf)); % 8 May 2017, BJA: Don't need to waste computations on fftshift for scaling calculation
             qq(n)=max(temp_data(:));%quantile(temp_data(:),thresh);
         end
         

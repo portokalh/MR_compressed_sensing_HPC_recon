@@ -69,7 +69,7 @@ end
 volume_manager_exec = getenv('CS_VOLUME_MANAGER_EXEC');
 if isempty(volume_manager_exec)
     %volume_manager_exec = '/cm/shared/workstation_code_dev/matlab_execs/volume_manager_executable/20171003_1013/run_volume_manager_exec.sh';
-    volume_manager_exec = '/cm/shared/workstation_code_dev/matlab_execs/volume_manager_executable/20171020_1325/run_volume_manager_exec.sh';   
+    volume_manager_exec = '/cm/shared/workstation_code_dev/matlab_execs/volume_manager_executable/20171023_1647//run_volume_manager_exec.sh';   
     %volume_manager_exec = '/cm/shared/workstation_code_dev/matlab_execs/volume_manager_executable/latest/run_volume_manager_exec.sh';
 
     setenv('CS_VOLUME_MANAGER_EXEC',volume_manager_exec);

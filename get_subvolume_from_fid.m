@@ -28,7 +28,13 @@ header_size=32; %agilent file headers are always 32 bytes big.
 if for_locals_only
     dd_dest_path=local_fidpath;
 else
-    remote_temp_fidpath=sprintf('/tmp/%s_%i_%i.fid',datestr(now,30),volume_number,ceil(rand(1)*10000));
+
+    f_time = datestr(now,30);
+    c_time = datestr(now,'FFF');
+    rand_vector = ceil(rand(str2num(c_time)+1,1)*10000);
+    r_num = rand_vector(min(volume_number,numel(rand_vector)));
+
+    remote_temp_fidpath=sprintf('/tmp/%s_%i_%04i.fid',f_time,volume_number,r_num);
     dd_dest_path=remote_temp_fidpath;
 end
 
@@ -43,11 +49,16 @@ if for_locals_only
     system(dd_cmd);
 else
     % runs dd command remotely.
+    pre_clean_cmd = 'find /tmp/ -mmin +120 -name "*.fid" -exec rm {} \;';
+    ssh_pre_clean=sprintf('ssh %s@%s "%s"',user,scanner,pre_clean_cmd);  
+    
+    system(ssh_pre_clean);
+    
     ssh_dd=sprintf('ssh %s@%s "%s"',user,scanner,dd_cmd);
 
     % fetches the fid file
     scp_fid=sprintf('scp -p %s@%s:%s %s',user,scanner,remote_temp_fidpath,local_fidpath);
-
+    
     system(ssh_dd); %run remote dd
     system(scp_fid); % fetch fid
 end
@@ -66,7 +77,7 @@ else
     if ~for_locals_only
         % removes temp fid remotly.
         ssh_rm_cmd=sprintf('ssh %s@%s rm %s',user,scanner,remote_temp_fidpath);
-        
+        disp(shh_rm_cmd)
         system(ssh_rm_cmd);
     end
 end
