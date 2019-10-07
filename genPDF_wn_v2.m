@@ -1,5 +1,7 @@
 function [pdf,val] = genPDF_wn_v2(imSize,pa,pctg,pb,disp)
 
+
+%[pdf,val] = genPDF([128,128],2,0.5,2,0,1);
 %[pdf,val] = genPDF(imSize,p,pctg [,distType,radius,disp])
 %
 %	generates a pdf for a 1d or 2d random sampling pattern

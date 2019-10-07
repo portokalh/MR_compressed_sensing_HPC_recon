@@ -12,21 +12,11 @@ function [ file_size_in_bytes] = get_remote_filesize( remote_path,remote_machine
 main_cmd = ['wc -c ' remote_path ' | cut -d '' '' -f1 ']; % -f4 worked on rootbeerfloat instead of -f1
 
 if exist('remote_machine','var')
-    % to use copy-id to new systems we need rsa keys.
-    if ~exist(sprintf('/home/%s/.ssh/id_rsa.pub',getenv('USER')),'file')
-        system('ssh-keygen -q');
-    end
-
-    [~,~]=system(['ssh-copy-id omega@' remote_machine]);
     remote_cmd = ['ssh omega@' remote_machine ' ' main_cmd];
-
 else
     remote_cmd = main_cmd;
 end
-
-
-[~,file_size_in_bytes] = system(remote_cmd);
-
+[~,file_size_in_bytes]=ssh_call(remote_cmd);
 file_size_in_bytes = strtrim(file_size_in_bytes);
 if isstrprop(file_size_in_bytes,'digit')
     file_size_in_bytes = str2double(file_size_in_bytes);
